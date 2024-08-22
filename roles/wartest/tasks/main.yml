@@ -1,19 +1,60 @@
-- name: install pip
-  apt:
-    name: python3-pip
-    state: present
-    update_cache: yes
+- hosts: all
+  become: yes
+  tasks:
+    - name: Installer les dépendances nécessaires
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+        state: present
+        update_cache: yes
 
-- name: pip install docker-py
-  pip:
-    name:
-      - docker
-      - docker-compose
+    - name: Ajouter le dépôt officiel Docker GPG
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
 
-- name: run container
-  docker_container:
-    name: wartest
-    image: "{{ image }}"
-    ports: 8081:8080
-    state: started
+    - name: Ajouter le dépôt Docker
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+
+    - name: Mettre à jour le cache apt
+      apt:
+        update_cache: yes
+
+    - name: Installer Docker
+      apt:
+        name: docker-ce
+        state: present
+
+    - name: S'assurer que le service Docker est démarré
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Installer pip3
+      apt:
+        name: python3-pip
+        state: present
+        update_cache: yes
+
+    - name: Installer docker et docker-compose via pip3
+      pip:
+        name:
+          - docker
+          - docker-compose
+        executable: pip3
+
+    - name: Démarrer le conteneur
+      docker_container:
+        name: wartest
+        image: "{{ image }}"
+        ports:
+          - "8081:8080"
+        state: started
+
  
